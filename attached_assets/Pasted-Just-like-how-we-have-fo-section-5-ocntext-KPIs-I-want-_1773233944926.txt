@@ -1,0 +1,88 @@
+Just like how we have fo section 5 ocntext KPIs, I want fo section 4 to be these:
+6.1:
+Performance Indicators
+Indicator	Measurement Method	Target
+Risk register update	Number of annual reviews	At least 2 times
+Implementation of treatment plans	Completion percentage	≥ 90%
+Reduction in operational incidents	Number of recorded cases	Continuous annual decline
+
+6.2:
+Indicator	Measurement Method	Target
+Rate of achieving quality objectives	Annual assessment results	≥ 90%
+Adherence to timelines	Completion percentage	≥ 95%
+Improvement in overall performance indicators	Annual comparison	Continuous improvement
+
+6.3:
+Indicator	Measurement Method	Target
+Documentation of all changes	Percentage of documented requests	100%
+Successful change implementation	Percentage of successful changes	≥ 90%
+Reduction of negative impacts	Number of resulting problems	Continuous decline
+
+
+
+7.1:
+Indicator	Measurement Method	Target
+Completeness of job descriptions	Coverage percentage	100%
+Training plan implementation	Completion percentage	≥ 90%
+Employee performance improvement	Assessment results	Continuous annual improvement
+
+7.2:
+Indicator	Measurement Method	Target
+Facility readiness	Periodic inspection results	≥ 95%
+Reduction in incidents	Number of recorded incidents	Zero major incidents
+Employee satisfaction	Survey results	≥ 85%
+
+7.3:
+Indicator	Measurement Method	Target
+Completeness of knowledge documentation	Percentage of approved documents	100%
+Document updates	Number of annual reviews	At least 2 times
+Ease of information access	User survey results	≥ 90%
+
+7.4:
+Indicator	Measurement Method	Target
+Completeness of document approval	Percentage of approved documents	100%
+Adherence to approved versions	Audit results	Zero non-conformance cases
+Speed of record retrieval	Average retrieval time	≤ 5 minutes
+
+8.1:
+Indicator	Measurement Method	Target
+Adherence to operational plans	Completion percentage	≥ 95%
+Beneficiary satisfaction	Survey results	≥ 90%
+Quality of services provided	Assessment results	Continuous improvement
+
+8.2:
+Indicator	Measurement Method	Target
+Clarity of service requirements	Percentage of documented requirements	100%
+Beneficiary satisfaction	Survey results	≥ 90%
+Response speed to requests	Average processing time	≤ 3 days
+
+8.3:
+Indicator	Measurement Method	Target
+Adherence to development schedule	Completion percentage	≥ 95%
+Success of new service launches	Assessment results	≥ 90%
+Beneficiary satisfaction	Survey results	≥ 90%
+
+8.4:
+Indicator	Measurement Method	Target
+Percentage of approved suppliers	Number of qualified suppliers	100%
+Quality of products and services	Assessment results	≥ 90%
+Delivery schedule adherence	Adherence percentage	≥ 95%
+
+8.5:
+Indicator	Measurement Method	Target
+Adherence to planned programs	Completion percentage	≥ 95%
+Beneficiary satisfaction	Survey results	≥ 90%
+Service quality	Assessment reports	Continuous improvement
+
+8.6:
+Indicator	Measurement Method	Target
+Asset register accuracy	Match percentage	100%
+Reduction in damage cases	Number of cases	Continuous annual decline
+Adherence to protection procedures	Inspection results	≥ 95%
+
+8.7:
+Indicator	Measurement Method	Target
+Number of non-conformance cases	Periodic register	Continuous decline
+Speed of case treatment	Average closure time	≤ 3 days
+Recurrence of cases	Recurrence percentage	Continuous annual decline
+

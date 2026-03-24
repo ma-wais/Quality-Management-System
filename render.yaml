@@ -1,0 +1,22 @@
+services:
+  - type: web
+    name: qms-pro
+    runtime: node
+    plan: free
+    buildCommand: npm install && npm run build
+    startCommand: npm start
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: DATABASE_URL
+        fromDatabase:
+          name: qms-db
+          property: connectionString
+      - key: SESSION_SECRET
+        generateValue: true
+
+databases:
+  - name: qms-db
+    plan: free
+    databaseName: qms
+    user: qms_admin

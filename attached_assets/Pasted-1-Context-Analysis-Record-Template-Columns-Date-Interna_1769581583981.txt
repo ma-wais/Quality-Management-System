@@ -1,0 +1,88 @@
+1. Context Analysis Record
+Template (Columns): Date | Internal/External Factor | Description | Impact | Action
+Usage: Once annually or upon significant change.
+
+2. Interested Parties Record
+Template: Party | Needs | Expectations | Follow-up Method
+Usage: Annual review.
+
+3. Risks and Opportunities Record
+Template: Risk/Opportunity | Impact | Likelihood | Action | Responsible | Review
+Usage: Monthly update.
+
+4. Quality Objectives Record
+Template: Objective | Indicator | Target Value | Responsible | Review
+Usage: Quarterly follow-up.
+
+5. Competence & Training - Job Description Record
+Template: Title | Tasks | Qualifications | KPI | Approval Date
+Usage: Upon hiring or update.
+
+6. Competence & Training - Employee File
+Template: Name | Position | Hire Date | Contract | Notes
+Usage: Updated upon any change.
+
+7. Competence & Training - Training Record
+Template: Employee | Training | Date | Provider | Evaluation
+Usage: After each training.
+
+8. Competence & Training - Performance Evaluation
+Template: Employee | Objectives | Evaluation | Improvement | Decision
+Usage: Semi-annually/Annually.
+
+9. Supplier Management - Service Delivery Record
+Template: Date | Beneficiary | Service | Description | Employee | Duration | Notes
+Usage: Daily after each service.
+
+10. Individual Plans Record
+Template: Beneficiary | Objective | Plan | Duration | Evaluation
+Usage: At service start and periodic review.
+
+11. Complaints Record (Beneficiaries)
+Template: Number | Date | Complaint | Action | Responsible | Status
+Usage: For each complaint until closure.
+
+12. Beneficiary Satisfaction Record
+Template: Period | Tool | Result | Improvement
+Usage: Quarterly.
+
+13. Resources Record
+Template: Type | Description | Status | Need | Action
+Usage: Periodic review.
+
+14. Maintenance Record
+Template: Equipment | Date | Maintenance | Responsible | Notes
+Usage: Upon each maintenance.
+
+15. Communication Record
+Template: Date | Party | Subject | Method | Result
+Usage: Upon each formal communication.
+
+16. KPI Record
+Template: Indicator | Value | Target | Status | Action
+Usage: Monthly.
+
+17. Nonconformity Record
+Template: Date | Description | Cause | Action | Closure
+Usage: Upon any defect occurrence.
+
+18. CAPA Record
+Template: Problem | Corrective Action | Responsible | Review
+Usage: After nonconformity.
+
+19. Internal Audit Record
+Template: Date | Area | Observations | Action
+Usage: Per audit plan.
+
+20. Management Review Record
+Template: Date | Topics | Decisions | Follow-up
+Usage: Semi-annually/Annually.
+
+21. Document Control Record
+Template: Document Name | Code | Version | Date | Status
+Usage: Upon any release/modification.
+
+22. Records Control Record
+Template: Record Name | Storage Location | Duration | Disposal
+Usage: Annual review.
+ 

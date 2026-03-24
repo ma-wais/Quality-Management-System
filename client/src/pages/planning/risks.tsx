@@ -1,0 +1,675 @@
+import { useState } from "react";
+import { useQuery, useMutation } from "@tanstack/react-query";
+import { useTranslation } from "react-i18next";
+import { PageHeader } from "@/components/page-header";
+import { DataTable } from "@/components/data-table";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { Card, CardContent } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
+import { Label } from "@/components/ui/label";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
+import { Plus, CheckCircle, ClipboardCheck, Pencil, FileDown, FileSpreadsheet, FileText } from "lucide-react";
+import { useToast } from "@/hooks/use-toast";
+import { useAuth } from "@/hooks/use-auth";
+import { queryClient, apiRequest } from "@/lib/queryClient";
+import { statusColors } from "@/lib/types";
+import { exportToWord, exportToExcel, exportToPdf } from "@/lib/export-utils";
+import type { Risk, InsertRisk } from "@shared/schema";
+import { EvidenceUpload } from "@/components/evidence-upload";
+
+export default function RisksPage() {
+  const [open, setOpen] = useState(false);
+  const [reviewOpen, setReviewOpen] = useState(false);
+  const [editOpen, setEditOpen] = useState(false);
+  const [selectedItem, setSelectedItem] = useState<Risk | null>(null);
+  const { toast } = useToast();
+  const { t, i18n } = useTranslation();
+  const isRtl = i18n.language === "ar";
+  const { user } = useAuth();
+  const userRole = localStorage.getItem("userRole") || "user";
+  const canReview = userRole === "admin" || userRole === "upper_management";
+  const canCreate = userRole !== "auditor";
+  const canExport = userRole === "auditor" || userRole === "admin" || userRole === "upper_management" || userRole === "quality_manager";
+
+  const { data: risks = [], isLoading } = useQuery<Risk[]>({
+    queryKey: ["/api/risks"],
+  });
+
+  const createMutation = useMutation({
+    mutationFn: (data: InsertRisk) => apiRequest("POST", "/api/risks", data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/risks"] });
+      setOpen(false);
+      toast({ title: t('common.success') });
+    },
+    onError: () => {
+      toast({ title: t('common.error'), variant: "destructive" });
+    },
+  });
+
+  const editMutation = useMutation({
+    mutationFn: (data: { id: string; updates: Partial<InsertRisk> }) =>
+      apiRequest("PATCH", `/api/risks/${data.id}`, data.updates),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/risks"] });
+      setEditOpen(false);
+      setSelectedItem(null);
+      toast({ title: t('common.success') });
+    },
+    onError: () => {
+      toast({ title: t('common.error'), variant: "destructive" });
+    },
+  });
+
+  const reviewMutation = useMutation({
+    mutationFn: (data: { id: string; reviewData: Record<string, unknown> }) =>
+      apiRequest("PATCH", `/api/risks/${data.id}`, data.reviewData),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/risks"] });
+      setReviewOpen(false);
+      setSelectedItem(null);
+      toast({ title: t('common.success') });
+    },
+    onError: () => {
+      toast({ title: t('common.error'), variant: "destructive" });
+    },
+  });
+
+  const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    const formData = new FormData(e.currentTarget);
+    const likelihood = parseInt(formData.get("likelihood") as string);
+    const impact = parseInt(formData.get("impact") as string);
+    createMutation.mutate({
+      title: formData.get("title") as string,
+      description: formData.get("description") as string,
+      riskType: formData.get("riskType") as string,
+      category: formData.get("category") as string,
+      likelihood,
+      impact,
+      riskScore: likelihood * impact,
+      mitigationPlan: formData.get("mitigationPlan") as string,
+      owner: formData.get("owner") as string,
+      status: "open",
+    });
+  };
+
+  const handleEditSubmit = (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    if (!selectedItem) return;
+    const formData = new FormData(e.currentTarget);
+    const likelihood = parseInt(formData.get("likelihood") as string);
+    const impact = parseInt(formData.get("impact") as string);
+    const actionDateStr = formData.get("actionDate") as string;
+    editMutation.mutate({
+      id: selectedItem.id,
+      updates: {
+        title: formData.get("title") as string,
+        description: formData.get("description") as string,
+        riskType: formData.get("riskType") as string,
+        category: formData.get("category") as string,
+        likelihood,
+        impact,
+        riskScore: likelihood * impact,
+        mitigationPlan: formData.get("mitigationPlan") as string,
+        owner: formData.get("owner") as string,
+        status: formData.get("status") as string,
+        actionDate: actionDateStr ? new Date(actionDateStr) : null,
+      },
+    });
+  };
+
+  const handleReviewSubmit = (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    if (!selectedItem) return;
+    const formData = new FormData(e.currentTarget);
+    reviewMutation.mutate({
+      id: selectedItem.id,
+      reviewData: {
+        reviewDescription: formData.get("reviewDescription") as string,
+        reviewedById: user?.id,
+        reviewedByName: user?.fullName || "Unknown",
+        reviewedByRole: userRole,
+        reviewCompletedAt: new Date().toISOString(),
+        status: "completed",
+      },
+    });
+  };
+
+  const getRiskLevel = (score: number) => {
+    if (score >= 15) return { label: t('priority.high'), class: statusColors.high };
+    if (score >= 6) return { label: t('priority.medium'), class: statusColors.medium };
+    return { label: t('priority.low'), class: statusColors.low };
+  };
+
+  const formatDate = (date: string | Date | null | undefined) => {
+    if (!date) return "";
+    const d = new Date(date);
+    return d.toLocaleDateString();
+  };
+
+  const getExportHeaders = () => [
+    t('formTitles.riskOpportunity'),
+    t('common.type'),
+    t('issues.category'),
+    t('risks.score'),
+    t('common.responsible'),
+    t('common.status'),
+    t('risks.actionDate'),
+    t('issues.createdBy'),
+    t('issues.reviewedBy'),
+    t('issues.reviewDescription'),
+  ];
+
+  const getExportRows = () =>
+    risks.map((r) => [
+      r.title || "-",
+      r.riskType || "-",
+      r.category || "-",
+      String((r.likelihood || 1) * (r.impact || 1)),
+      r.owner || "-",
+      t(`status.${r.status}`),
+      r.actionDate ? formatDate(r.actionDate) : "-",
+      r.createdByName || "-",
+      r.reviewedByName || "-",
+      r.reviewDescription || "-",
+    ]);
+
+  const exportConfig = {
+    title: t('risks.title'),
+    clause: "6.1",
+    description: t('risks.description'),
+    headers: getExportHeaders(),
+    rows: getExportRows(),
+    isRtl,
+    filename: "6.1_Risks_Opportunities",
+  };
+
+  const columns = [
+    { key: "title", header: t('formTitles.riskOpportunity') },
+    {
+      key: "riskType",
+      header: t('common.type'),
+      render: (item: Risk) => (
+        <Badge variant="outline" className="capitalize">
+          {item.riskType}
+        </Badge>
+      ),
+    },
+    { key: "category", header: t('issues.category') },
+    {
+      key: "description",
+      header: t('common.description'),
+      className: "min-w-[200px]",
+      render: (item: Risk) => (
+        <span className="whitespace-pre-wrap break-words">{item.description || "-"}</span>
+      ),
+    },
+    {
+      key: "riskScore",
+      header: t('risks.score'),
+      render: (item: Risk) => {
+        const score = (item.likelihood || 1) * (item.impact || 1);
+        const level = getRiskLevel(score);
+        return (
+          <Badge className={level.class}>
+            {score} ({level.label})
+          </Badge>
+        );
+      },
+    },
+    { key: "owner", header: t('common.responsible') },
+    {
+      key: "status",
+      header: t('common.status'),
+      render: (item: Risk) => (
+        <Badge className={statusColors[item.status] || ""}>
+          {t(`status.${item.status}`)}
+        </Badge>
+      ),
+    },
+    {
+      key: "actionDate",
+      header: t('risks.actionDate'),
+      render: (item: Risk) => item.actionDate ? formatDate(item.actionDate) : "",
+    },
+    {
+      key: "reviewed",
+      header: t('issues.reviewed'),
+      render: (item: Risk) => (
+        item.reviewCompletedAt ? (
+          <Popover>
+            <PopoverTrigger asChild>
+              <Button variant="ghost" size="icon" className="h-8 w-8" data-testid={`button-review-details-${item.id}`}>
+                <CheckCircle className="h-5 w-5 text-green-600" />
+              </Button>
+            </PopoverTrigger>
+            <PopoverContent className="w-80" align="start">
+              <div className="space-y-3">
+                <h4 className="font-semibold text-sm">{t('issues.reviewDetails')}</h4>
+                <div className="space-y-2 text-sm">
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground">{t('issues.createdBy')}:</span>
+                    <span className="font-medium">{item.createdByName || '-'}</span>
+                  </div>
+                  <div className="pt-2 border-t">
+                    <div className="flex justify-between">
+                      <span className="text-muted-foreground">{t('issues.reviewedBy')}:</span>
+                      <span className="font-medium">{item.reviewedByName}</span>
+                    </div>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground">{t('issues.reviewerRole')}:</span>
+                    <span className="font-medium">{item.reviewedByRole ? t(`roles.${item.reviewedByRole}`) : '-'}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground">{t('issues.reviewDate')}:</span>
+                    <span className="font-medium">
+                      {item.reviewCompletedAt ? new Date(item.reviewCompletedAt).toLocaleDateString() : '-'}
+                    </span>
+                  </div>
+                  {item.reviewDescription && (
+                    <div className="pt-2 border-t">
+                      <span className="text-muted-foreground block mb-1">{t('issues.reviewDescription')}:</span>
+                      <p className="text-sm">{item.reviewDescription}</p>
+                    </div>
+                  )}
+                </div>
+              </div>
+            </PopoverContent>
+          </Popover>
+        ) : (
+          <span className="text-muted-foreground text-sm">-</span>
+        )
+      ),
+    },
+    {
+      key: "actions",
+      header: t('common.actions'),
+      render: (item: Risk) => {
+        const isCreator = user?.id === item.createdBy;
+        const canEdit = isCreator && !item.reviewCompletedAt;
+        const showReview = canReview && !item.reviewCompletedAt;
+        if (!canEdit && !showReview) return null;
+        return (
+          <div className="flex gap-1">
+            {canEdit && (
+              <Button variant="outline" size="sm" onClick={() => { setSelectedItem(item); setEditOpen(true); }} data-testid={`button-edit-${item.id}`}>
+                <Pencil className="h-4 w-4 ltr:mr-2 rtl:ml-2" />
+                {t('common.edit')}
+              </Button>
+            )}
+            {showReview && (
+              <Button variant="outline" size="sm" onClick={() => { setSelectedItem(item); setReviewOpen(true); }} data-testid={`button-review-${item.id}`}>
+                <ClipboardCheck className="h-4 w-4 ltr:mr-2 rtl:ml-2" />
+                {t('issues.review')}
+              </Button>
+            )}
+          </div>
+        );
+      },
+    },
+  ];
+
+  return (
+    <div className="p-6">
+      <PageHeader
+        title={t('risks.title')}
+        description={t('risks.description')}
+        clause="6.1"
+      >
+        <div className="flex gap-2">
+          {canExport && (
+            <>
+              <Button variant="outline" size="sm" onClick={() => exportToWord(exportConfig)} data-testid="button-export-word">
+                <FileText className="h-4 w-4 ltr:mr-2 rtl:ml-2" />
+                {t('issues.exportWord')}
+              </Button>
+              <Button variant="outline" size="sm" onClick={() => exportToExcel(exportConfig)} data-testid="button-export-excel">
+                <FileSpreadsheet className="h-4 w-4 ltr:mr-2 rtl:ml-2" />
+                {t('issues.exportExcel')}
+              </Button>
+              <Button variant="outline" size="sm" onClick={() => exportToPdf(exportConfig)} data-testid="button-export-pdf">
+                <FileDown className="h-4 w-4 ltr:mr-2 rtl:ml-2" />
+                {t('issues.exportPdf')}
+              </Button>
+            </>
+          )}
+          {canCreate && (
+            <Dialog open={open} onOpenChange={setOpen}>
+              <DialogTrigger asChild>
+                <Button data-testid="button-add-risk">
+                  <Plus className="h-4 w-4 ltr:mr-2 rtl:ml-2" />
+                  {t('risks.addRisk')}
+                </Button>
+              </DialogTrigger>
+              <DialogContent className="max-w-lg">
+                <DialogHeader>
+                  <DialogTitle>{t('risks.addRisk')}</DialogTitle>
+                </DialogHeader>
+                <form onSubmit={handleSubmit} className="space-y-4">
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="title">{t('formTitles.riskOpportunity')}</Label>
+                      <Input
+                        id="title"
+                        name="title"
+                        required
+                        data-testid="input-title"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="riskType">{t('common.type')}</Label>
+                      <Select name="riskType" required>
+                        <SelectTrigger data-testid="select-risk-type">
+                          <SelectValue placeholder={t('form.selectRole')} />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="risk">{t('risks.risk')}</SelectItem>
+                          <SelectItem value="opportunity">{t('risks.opportunity')}</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  </div>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="category">{t('issues.category')}</Label>
+                      <Input
+                        id="category"
+                        name="category"
+                        required
+                        data-testid="input-category"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="owner">{t('common.responsible')}</Label>
+                      <Input
+                        id="owner"
+                        name="owner"
+                        required
+                        data-testid="input-owner"
+                      />
+                    </div>
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="description">{t('common.description')}</Label>
+                    <Textarea
+                      id="description"
+                      name="description"
+                      required
+                      data-testid="input-description"
+                    />
+                  </div>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="likelihood">{t('risks.likelihood')}</Label>
+                      <Select name="likelihood" required>
+                        <SelectTrigger data-testid="select-likelihood">
+                          <SelectValue placeholder={t('form.selectRole')} />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="1">1 - {t('risks.rare')}</SelectItem>
+                          <SelectItem value="2">2 - {t('risks.unlikely')}</SelectItem>
+                          <SelectItem value="3">3 - {t('risks.possible')}</SelectItem>
+                          <SelectItem value="4">4 - {t('risks.likely')}</SelectItem>
+                          <SelectItem value="5">5 - {t('risks.almostCertain')}</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="impact">{t('issues.impact')}</Label>
+                      <Select name="impact" required>
+                        <SelectTrigger data-testid="select-impact">
+                          <SelectValue placeholder={t('form.selectRole')} />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="1">1 - {t('risks.negligible')}</SelectItem>
+                          <SelectItem value="2">2 - {t('risks.minor')}</SelectItem>
+                          <SelectItem value="3">3 - {t('risks.moderate')}</SelectItem>
+                          <SelectItem value="4">4 - {t('risks.major')}</SelectItem>
+                          <SelectItem value="5">5 - {t('risks.severe')}</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="mitigationPlan">{t('risks.mitigationPlan')}</Label>
+                    <Textarea
+                      id="mitigationPlan"
+                      name="mitigationPlan"
+                      data-testid="input-mitigation"
+                    />
+                  </div>
+                  <div className="flex justify-end gap-2">
+                    <Button
+                      type="button"
+                      variant="outline"
+                      onClick={() => setOpen(false)}
+                    >
+                      {t('common.cancel')}
+                    </Button>
+                    <Button
+                      type="submit"
+                      disabled={createMutation.isPending}
+                      data-testid="button-submit-risk"
+                    >
+                      {createMutation.isPending ? t('common.loading') : t('common.add')}
+                    </Button>
+                  </div>
+                </form>
+              </DialogContent>
+            </Dialog>
+          )}
+        </div>
+      </PageHeader>
+
+      <Card>
+        <CardContent className="p-0">
+          <DataTable
+            columns={columns}
+            data={risks}
+            isLoading={isLoading}
+            emptyMessage={t('common.noData')}
+          />
+        </CardContent>
+      </Card>
+
+      <Dialog open={editOpen} onOpenChange={setEditOpen}>
+        <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>{t('common.edit')}</DialogTitle>
+          </DialogHeader>
+          {selectedItem && (
+            <form onSubmit={handleEditSubmit} className="space-y-4">
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="edit-title">{t('formTitles.riskOpportunity')}</Label>
+                  <Input
+                    id="edit-title"
+                    name="title"
+                    required
+                    defaultValue={selectedItem.title}
+                    data-testid="input-edit-title"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="edit-riskType">{t('common.type')}</Label>
+                  <Select name="riskType" required defaultValue={selectedItem.riskType}>
+                    <SelectTrigger data-testid="select-edit-risk-type">
+                      <SelectValue placeholder={t('form.selectRole')} />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="risk">{t('risks.risk')}</SelectItem>
+                      <SelectItem value="opportunity">{t('risks.opportunity')}</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="edit-category">{t('issues.category')}</Label>
+                  <Input
+                    id="edit-category"
+                    name="category"
+                    required
+                    defaultValue={selectedItem.category}
+                    data-testid="input-edit-category"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="edit-owner">{t('common.responsible')}</Label>
+                  <Input
+                    id="edit-owner"
+                    name="owner"
+                    required
+                    defaultValue={selectedItem.owner}
+                    data-testid="input-edit-owner"
+                  />
+                </div>
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="edit-description">{t('common.description')}</Label>
+                <Textarea
+                  id="edit-description"
+                  name="description"
+                  required
+                  defaultValue={selectedItem.description}
+                  data-testid="input-edit-description"
+                />
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="edit-likelihood">{t('risks.likelihood')}</Label>
+                  <Select name="likelihood" required defaultValue={String(selectedItem.likelihood)}>
+                    <SelectTrigger data-testid="select-edit-likelihood">
+                      <SelectValue placeholder={t('form.selectRole')} />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="1">1 - {t('risks.rare')}</SelectItem>
+                      <SelectItem value="2">2 - {t('risks.unlikely')}</SelectItem>
+                      <SelectItem value="3">3 - {t('risks.possible')}</SelectItem>
+                      <SelectItem value="4">4 - {t('risks.likely')}</SelectItem>
+                      <SelectItem value="5">5 - {t('risks.almostCertain')}</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="edit-impact">{t('issues.impact')}</Label>
+                  <Select name="impact" required defaultValue={String(selectedItem.impact)}>
+                    <SelectTrigger data-testid="select-edit-impact">
+                      <SelectValue placeholder={t('form.selectRole')} />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="1">1 - {t('risks.negligible')}</SelectItem>
+                      <SelectItem value="2">2 - {t('risks.minor')}</SelectItem>
+                      <SelectItem value="3">3 - {t('risks.moderate')}</SelectItem>
+                      <SelectItem value="4">4 - {t('risks.major')}</SelectItem>
+                      <SelectItem value="5">5 - {t('risks.severe')}</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="edit-mitigationPlan">{t('risks.mitigationPlan')}</Label>
+                <Textarea
+                  id="edit-mitigationPlan"
+                  name="mitigationPlan"
+                  defaultValue={selectedItem.mitigationPlan || ""}
+                  data-testid="input-edit-mitigation"
+                />
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="edit-status">{t('common.status')}</Label>
+                  <Select name="status" required defaultValue={selectedItem.status}>
+                    <SelectTrigger data-testid="select-edit-status">
+                      <SelectValue placeholder={t('common.status')} />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="open">{t('status.open')}</SelectItem>
+                      <SelectItem value="in_progress">{t('status.in_progress')}</SelectItem>
+                      <SelectItem value="closed">{t('status.closed')}</SelectItem>
+                      <SelectItem value="monitoring">{t('status.monitoring')}</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="edit-actionDate">{t('risks.actionDate')}</Label>
+                  <Input
+                    id="edit-actionDate"
+                    name="actionDate"
+                    type="date"
+                    defaultValue={selectedItem.actionDate ? new Date(selectedItem.actionDate).toISOString().split('T')[0] : ""}
+                    data-testid="input-edit-action-date"
+                  />
+                </div>
+              </div>
+              <div className="space-y-2">
+                <Label>{t('evidence.upload')}</Label>
+                <EvidenceUpload module="risks" entityId={selectedItem.id} />
+              </div>
+              <div className="flex justify-end gap-2">
+                <Button type="button" variant="outline" onClick={() => setEditOpen(false)}>{t('common.cancel')}</Button>
+                <Button type="submit" disabled={editMutation.isPending} data-testid="button-save-edit-risk">
+                  {editMutation.isPending ? t('common.loading') : t('common.save')}
+                </Button>
+              </div>
+            </form>
+          )}
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={reviewOpen} onOpenChange={setReviewOpen}>
+        <DialogContent className="max-w-lg">
+          <DialogHeader>
+            <DialogTitle>{t('issues.reviewRecord')}</DialogTitle>
+          </DialogHeader>
+          {selectedItem && (
+            <form onSubmit={handleReviewSubmit} className="space-y-4">
+              <div className="space-y-2 text-sm">
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">{t('formTitles.riskOpportunity')}:</span>
+                  <span className="font-medium">{selectedItem.title}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">{t('issues.createdBy')}:</span>
+                  <span className="font-medium">{selectedItem.createdByName || '-'}</span>
+                </div>
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="reviewDescription">{t('issues.remarks')}</Label>
+                <Textarea id="reviewDescription" name="reviewDescription" required data-testid="input-review-description" />
+              </div>
+              <div className="flex justify-end gap-2">
+                <Button type="button" variant="outline" onClick={() => setReviewOpen(false)}>{t('common.cancel')}</Button>
+                <Button type="submit" disabled={reviewMutation.isPending} data-testid="button-submit-review">
+                  {reviewMutation.isPending ? t('common.loading') : t('issues.submitReview')}
+                </Button>
+              </div>
+            </form>
+          )}
+        </DialogContent>
+      </Dialog>
+    </div>
+  );
+}

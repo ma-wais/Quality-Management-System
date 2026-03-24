@@ -1,0 +1,14 @@
+uploads = []
+generated = []
+
+[[outputs]]
+id = "CViOrQiZnRzbpQVdL57_c"
+uri = "file://QMS_Setup_Guide.md"
+type = "text"
+title = "QMS Pro - Complete Setup & Deployment Guide"
+
+[[outputs]]
+id = "kn2lHxWpmjK229ZKsCWt3"
+uri = "file://QMS_Setup_Guide.docx"
+type = "word_document"
+title = "QMS Pro - Complete Setup & Deployment Guide"
